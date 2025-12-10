@@ -1,0 +1,48 @@
+[
+  {
+    "id": "59f66634-d307-4772-a8af-1f979c8333ef",
+    "title": "Maison des jeunes",
+    "shortDescription": "site web pour les maisons des jeunes de charlevoix est",
+    "fullDescription": "",
+    "technologies": [
+      "react",
+      "vite"
+    ],
+    "liveUrl": "http://51.79.55.227/",
+    "githubUrl": "",
+    "imageUrl": "",
+    "isHighlighted": false,
+    "order": 1
+  },
+  {
+    "id": "e0f4dfff-b483-4d3e-814b-841097650721",
+    "title": "Les beaux projets",
+    "shortDescription": "Site web demo pour un entrepreneur général",
+    "fullDescription": "",
+    "technologies": [
+      "react",
+      "vite"
+    ],
+    "liveUrl": "https://mathisd-t.github.io/lbp/",
+    "githubUrl": "",
+    "imageUrl": "",
+    "isHighlighted": false,
+    "order": 1
+  },
+  {
+    "id": "51396bf3-75d4-4dbb-88e5-1a666fdf0146",
+    "title": "Chez hector",
+    "shortDescription": "site web de test pour le restaurant chez hector",
+    "fullDescription": "",
+    "technologies": [
+      "html",
+      "css",
+      "javascript"
+    ],
+    "liveUrl": "https://mathisd-t.github.io/demo/demos/Chezhector/",
+    "githubUrl": "",
+    "imageUrl": "",
+    "isHighlighted": false,
+    "order": 1
+  }
+]

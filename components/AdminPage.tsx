@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Project } from '../types';
+import {
+  createProject,
+  deleteProject,
+  getAdminPasswordHint,
+  isAuthenticated as isAuthenticatedStore,
+  listProjects,
+  login,
+  logout,
+  resetProjects,
+  updateProject,
+} from '../localProjectStore';
 
 type FormState = {
   title: string;
@@ -13,7 +24,7 @@ type FormState = {
   order: number;
 };
 
-const createEmptyForm = (): FormState => ({
+const createEmptyForm = (nextOrder = 1): FormState => ({
   title: '',
   shortDescription: '',
   fullDescription: '',
@@ -22,7 +33,7 @@ const createEmptyForm = (): FormState => ({
   githubUrl: '',
   imageUrl: '',
   isHighlighted: false,
-  order: 1,
+  order: nextOrder,
 });
 
 export const AdminPage: React.FC = () => {
@@ -30,13 +41,14 @@ export const AdminPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => isAuthenticatedStore());
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [formState, setFormState] = useState<FormState>(createEmptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const homeHref = import.meta.env.BASE_URL || '/';
 
   useEffect(() => {
     loadProjects();
@@ -50,22 +62,15 @@ export const AdminPage: React.FC = () => {
     [projects]
   );
 
-  const fetchWithAuth = (url: string, options: RequestInit = {}) =>
-    fetch(url, {
-      credentials: 'include',
-      ...options,
-    });
-
   const loadProjects = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth('/api/projects');
-      if (!res.ok) {
-        throw new Error(`Server error ${res.status}`);
-      }
-      const data: Project[] = await res.json();
+      const data = await listProjects();
       setProjects(data);
+      if (!editingId) {
+        setFormState(createEmptyForm(data.length + 1));
+      }
     } catch (err) {
       console.error(err);
       setError('Impossible de charger les projets.');
@@ -83,12 +88,17 @@ export const AdminPage: React.FC = () => {
   };
 
   const resetForm = () => {
-    setFormState(createEmptyForm());
+    setFormState(createEmptyForm(projects.length + 1));
     setEditingId(null);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!isAuthenticated) {
+      setError('Connexion admin requise.');
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     setNotice(null);
@@ -105,39 +115,18 @@ export const AdminPage: React.FC = () => {
       order: Number(formState.order) || 0,
     };
 
-    const method = editingId ? 'PUT' : 'POST';
-    const url = editingId ? `/api/projects/${editingId}` : '/api/projects';
-
     try {
-      const res = await fetchWithAuth(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.status === 401) {
-        setIsAuthenticated(false);
-        throw new Error('AUTH_REQUIRED');
+      if (editingId) {
+        await updateProject(editingId, payload);
+      } else {
+        await createProject(payload);
       }
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        const detail = body?.errors?.join(', ') || body?.message;
-        throw new Error(detail || 'SAVE_FAILED');
-      }
-
       await loadProjects();
       resetForm();
-      setNotice(editingId ? 'Projet mis à jour.' : 'Projet créé.');
+      setNotice(editingId ? 'Projet mis a jour.' : 'Projet cree.');
     } catch (err) {
       console.error(err);
-      if ((err as Error).message === 'AUTH_REQUIRED') {
-        setError('Connexion admin requise.');
-      } else {
-        setError('Impossible de sauvegarder le projet.');
-      }
+      setError('Impossible de sauvegarder le projet.');
     } finally {
       setIsSaving(false);
     }
@@ -152,7 +141,7 @@ export const AdminPage: React.FC = () => {
       technologies: project.technologies.join(', '),
       liveUrl: project.liveUrl,
       githubUrl: project.githubUrl || '',
-      imageUrl: project.imageUrl,
+      imageUrl: project.imageUrl || '',
       isHighlighted: project.isHighlighted,
       order: project.order,
     });
@@ -164,29 +153,15 @@ export const AdminPage: React.FC = () => {
     setError(null);
     setNotice(null);
     try {
-      const res = await fetchWithAuth(`/api/projects/${project.id}`, {
-        method: 'DELETE',
-      });
-
-      if (res.status === 401) {
-        setIsAuthenticated(false);
-        throw new Error('AUTH_REQUIRED');
-      }
-      if (!res.ok) {
-        throw new Error('DELETE_FAILED');
-      }
+      await deleteProject(project.id);
       await loadProjects();
       if (editingId === project.id) {
         resetForm();
       }
-      setNotice('Projet supprimé.');
+      setNotice('Projet supprime.');
     } catch (err) {
       console.error(err);
-      if ((err as Error).message === 'AUTH_REQUIRED') {
-        setError('Connexion admin requise.');
-      } else {
-        setError('Impossible de supprimer le projet.');
-      }
+      setError('Impossible de supprimer le projet.');
     }
   };
 
@@ -195,34 +170,36 @@ export const AdminPage: React.FC = () => {
     setAuthError(null);
     setAuthLoading(true);
     try {
-      const res = await fetchWithAuth('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passwordInput }),
-      });
-      if (!res.ok) {
-        throw new Error('INVALID_CREDENTIALS');
+      const ok = await login(passwordInput.trim());
+      if (!ok) {
+        setAuthError('Mot de passe incorrect.');
+        setIsAuthenticated(false);
+        return;
       }
       setIsAuthenticated(true);
       setPasswordInput('');
-      setNotice('Connecté en tant qu’admin.');
+      setNotice("Connecte en tant qu'admin.");
     } catch (err) {
       console.error(err);
-      setAuthError('Mot de passe incorrect.');
-      setIsAuthenticated(false);
+      setAuthError('Impossible de verifier le mot de passe.');
     } finally {
       setAuthLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await fetchWithAuth('/api/logout', { method: 'POST' });
-    } catch (err) {
-      console.error(err);
-    }
+    await logout();
     setIsAuthenticated(false);
-    setNotice('Déconnecté.');
+    setNotice('Deconnecte.');
+  };
+
+  const handleResetData = async () => {
+    const ok = window.confirm('Recharger les donnees par defaut ? (efface les donnees locales)');
+    if (!ok) return;
+    const restored = await resetProjects();
+    setProjects(restored);
+    resetForm();
+    setNotice('Donnees remises a zero localement.');
   };
 
   return (
@@ -231,10 +208,13 @@ export const AdminPage: React.FC = () => {
         <div className="uppercase tracking-widest">
           <div className="text-zinc-500 text-[11px]">[ ADMIN_PANEL // PROJECTS ]</div>
           <div className="text-white text-lg">Portfolio Control</div>
+          <div className="text-[11px] text-zinc-500">
+            Donnees stockees localement (pas de backend).
+          </div>
         </div>
         <div className="flex gap-3 items-center">
           <a
-            href="/"
+            href={homeHref}
             className="text-zinc-500 hover:text-white underline decoration-1 underline-offset-4"
           >
             Retour au site
@@ -251,8 +231,13 @@ export const AdminPage: React.FC = () => {
       </header>
 
       <div className="border border-zinc-800 p-4 mb-6">
-        <div className="uppercase tracking-widest text-[11px] text-zinc-500 mb-2">Connexion admin</div>
-        <form className="flex flex-col sm:flex-row gap-3 items-start sm:items-end" onSubmit={handleLogin}>
+        <div className="uppercase tracking-widest text-[11px] text-zinc-500 mb-2">
+          Connexion admin (mot de passe stocke uniquement sur le client)
+        </div>
+        <form
+          className="flex flex-col sm:flex-row gap-3 items-start sm:items-end"
+          onSubmit={handleLogin}
+        >
           <label className="flex flex-col gap-1 text-[11px] uppercase w-full sm:w-auto">
             Mot de passe
             <input
@@ -272,7 +257,7 @@ export const AdminPage: React.FC = () => {
           </button>
           {!isAuthenticated && (
             <span className="text-[11px] text-zinc-500">
-              Défini côté backend via ADMIN_PASSWORD (par défaut "change-me").
+              Mot de passe par defaut: {getAdminPasswordHint()}
             </span>
           )}
         </form>
@@ -288,12 +273,20 @@ export const AdminPage: React.FC = () => {
             <span className="uppercase tracking-widest text-[11px] text-zinc-500">
               Liste des projets ({projects.length})
             </span>
-            <button
-              onClick={resetForm}
-              className="text-[11px] uppercase border border-zinc-700 px-3 py-1 hover:bg-white hover:text-black transition-colors"
-            >
-              Nouveau
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={resetForm}
+                className="text-[11px] uppercase border border-zinc-700 px-3 py-1 hover:bg-white hover:text-black transition-colors"
+              >
+                Nouveau
+              </button>
+              <button
+                onClick={handleResetData}
+                className="text-[11px] uppercase border border-zinc-700 px-3 py-1 hover:bg-zinc-800 transition-colors"
+              >
+                Reset local
+              </button>
+            </div>
           </div>
 
           {isLoading && <div className="text-zinc-500">Chargement...</div>}
@@ -303,23 +296,28 @@ export const AdminPage: React.FC = () => {
           {!isLoading && !error && (
             <div className="divide-y divide-zinc-800">
               {orderedProjects.map((project) => (
-                <div key={project.id} className="py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div
+                  key={project.id}
+                  className="py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                >
                   <div className="flex-1">
                     <div className="text-white text-sm">{project.title}</div>
                     <div className="text-zinc-500 text-[11px]">
-                      #{project.order} — {project.technologies.join(', ')}
+                      #{project.order} - {project.technologies.join(', ')}
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => startEdit(project)}
                       className="border border-zinc-700 px-3 py-1 text-[11px] uppercase hover:bg-white hover:text-black transition-colors"
+                      disabled={!isAuthenticated}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(project)}
                       className="border border-red-700 text-red-400 px-3 py-1 text-[11px] uppercase hover:bg-red-600 hover:text-white transition-colors"
+                      disabled={!isAuthenticated}
                     >
                       Delete
                     </button>
@@ -327,7 +325,7 @@ export const AdminPage: React.FC = () => {
                 </div>
               ))}
               {orderedProjects.length === 0 && (
-                <div className="text-zinc-500 py-4">Aucun projet enregistré.</div>
+                <div className="text-zinc-500 py-4">Aucun projet enregistre.</div>
               )}
             </div>
           )}
@@ -335,7 +333,7 @@ export const AdminPage: React.FC = () => {
 
         <section className="border border-zinc-800 p-4 space-y-4">
           <div className="uppercase tracking-widest text-[11px] text-zinc-500">
-            {editingId ? `Édition: ${editingId}` : 'Nouveau projet'}
+            {editingId ? `Edition: ${editingId}` : 'Nouveau projet'}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -364,7 +362,7 @@ export const AdminPage: React.FC = () => {
             </label>
 
             <label className="flex flex-col gap-1 text-[11px] uppercase">
-              Description détaillée
+              Description detaillee
               <textarea
                 className="bg-black border border-zinc-700 px-2 py-2 text-white h-20"
                 value={formState.fullDescription}
@@ -376,7 +374,7 @@ export const AdminPage: React.FC = () => {
             </label>
 
             <label className="flex flex-col gap-1 text-[11px] uppercase">
-              Technologies (séparées par des virgules)
+              Technologies (separees par des virgules)
               <input
                 className="bg-black border border-zinc-700 px-2 py-2 text-white"
                 value={formState.technologies}
@@ -417,8 +415,10 @@ export const AdminPage: React.FC = () => {
                 value={formState.imageUrl}
                 onChange={(e) => setFormState({ ...formState, imageUrl: e.target.value })}
                 disabled={!isAuthenticated}
-                />
-            <span className="text-[10px] text-zinc-500">Optionnel : utilisé comme image de prévisualisation; sinon une capture automatique du liveUrl est utilisée.</span>
+              />
+              <span className="text-[10px] text-zinc-500">
+                Optionnel : utilise comme image de previsualisation; sinon capture auto du liveUrl.
+              </span>
             </label>
 
             <div className="flex items-center justify-between text-[11px] uppercase">
@@ -454,7 +454,7 @@ export const AdminPage: React.FC = () => {
                 disabled={isSaving || !isAuthenticated}
                 className="border border-zinc-700 px-4 py-2 uppercase text-[11px] hover:bg-white hover:text-black transition-colors disabled:opacity-50"
               >
-                {isSaving ? 'En cours...' : editingId ? 'Mettre à jour' : 'Créer'}
+                {isSaving ? 'En cours...' : editingId ? 'Mettre a jour' : 'Creer'}
               </button>
               {editingId && (
                 <button

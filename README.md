@@ -1,61 +1,25 @@
-# Portfolio
+# Portfolio (front uniquement)
 
-Landing page Vite + petit backend Express pour gérer les projets via une API REST + page admin.
+Portfolio React/Vite entierement client-side : aucune API ou backend n'est necessaire. Les projets sont stockes dans `localStorage` avec un seed initial.
 
-## Prérequis
+## Prerequis
 - Node.js 18+
 
 ## Scripts
-- `npm run dev` : lance front (http://localhost:3000) + API (http://localhost:4000) en parallèle.
-- `npm run dev:client` : front uniquement.
-- `npm run dev:server` : API uniquement (prend `ADMIN_PASSWORD` en env si défini).
-- `npm run build` : build front (dossier `dist`).
-- `npm run build:server` : compile l’API dans `backend/dist`.
-- `npm run start:server` : démarre l’API compilée depuis `backend/dist/server.js`.
-- Déploiement statique GitHub Pages : workflow `.github/workflows/deploy.yml` (push sur `main`).
+- `npm run dev` : lance Vite sur http://localhost:3000.
+- `npm run build` : build statique dans `dist`.
+- `npm run preview` : previsualisation du build.
 
-## API projets
-Routes principales :
-- `GET /api/projects` — liste des projets (tri possible par `order` côté front).
-- `GET /api/projects/:id` — détail.
-- `POST /api/projects` — créer (session admin requise).
-- `PUT /api/projects/:id` — modifier (session admin requise).
-- `DELETE /api/projects/:id` — supprimer (session admin requise).
-
-Schéma de projet (JSON) :
-```json
-{
-  "id": "prj-01",
-  "title": "NEXUS_DASHBOARD",
-  "shortDescription": "Courte phrase",
-  "fullDescription": "Détails longs (optionnel)",
-  "technologies": ["React", "TS"],
-  "liveUrl": "https://...",
-  "githubUrl": "https://... (optionnel)",
-  "imageUrl": "https://.../img.png (optionnel)",
-  "isHighlighted": true,
-  "order": 1
-}
-```
-
-### Stockage
-Les projets sont persistés dans `backend/data/projects.json`. Modifiez/seed ce fichier directement ou via la page admin.
-
-### Sécurité minimale
-- Login simple via `POST /api/login` avec le mot de passe `ADMIN_PASSWORD` (défaut: `change-me`).
-- En cas de succès, un cookie HttpOnly `admin_session` est émis et utilisé par les routes POST/PUT/DELETE.
-- `POST /api/logout` pour invalider la session.
-Pour changer le mot de passe : `ADMIN_PASSWORD="mon-mot-de-passe" npm run dev:server` (ou via l’environnement).
+## Donnees projets
+- Seed defini dans `localProjectStore.ts`. Au premier chargement, il est copie dans `localStorage` (`portfolio:projects:v1`).
+- Toutes les actions admin (creation, edition, suppression, reset local) lisent/ecrivent dans ce stockage navigateur uniquement.
+- Bouton "Reset local" dans l'admin pour revenir au seed.
 
 ## Page admin
-- Accessible via `/admin` sur le front.
-- Connexion via mot de passe (ADMIN_PASSWORD) puis CRUD complet sur les projets (ordre, highlights, liens, stack, etc.).
+- Acces via `/admin` (ou `${BASE_URL}admin` sur GitHub Pages).
+- Mot de passe cote client (par defaut `terre777`) stocke dans `localStorage` pour la session.
+- CRUD complet sur les projets ; pas de persistance serveur.
 
-## Front
-- Section projets inchangée visuellement : les données viennent de `GET /api/projects` avec un loader simple + gestion d’erreur. La prévisualisation affiche une capture automatique du `liveUrl` (ou `imageUrl` si fourni) dans un format vignette ; si vide, un libellé “No live preview” apparaît.
-- Le proxy Vite route `/api/*` vers l’API en dev (port 4000).
-
-## GitHub Pages
-- Le workflow `Deploy Vite site to GitHub Pages` publie le contenu de `dist` sur GitHub Pages (branche main).
-- Le `base` Vite est défini sur `/Portfolio/` dans `vite.config.ts` : change-le si ton nom de repo diffère pour que les assets se résolvent correctement.
-- Active Pages dans Settings > Pages > Source: GitHub Actions.
+## Deploiement statique
+- 100% compatible GitHub Pages. Le `base` Vite est regle sur `/Portfolio/` dans `vite.config.ts` ; ajuste-le si le nom du repo change.
+- Workflow `.github/workflows/deploy.yml` publie `dist` sur Pages.

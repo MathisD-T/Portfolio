@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { AdminPage } from './components/AdminPage';
 import { ProjectCard } from './components/ProjectCard';
 import { SKILLS, MY_NAME, MY_ROLE } from './constants';
+import { listProjects } from './localProjectStore';
 import { Project } from './types';
-import { AdminPage } from './components/AdminPage';
 
 const App: React.FC = () => {
-  const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+  const isAdminRoute =
+    typeof window !== 'undefined' &&
+    window.location.pathname.toLowerCase().includes('/admin');
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);
@@ -16,18 +19,14 @@ const App: React.FC = () => {
       setIsLoadingProjects(true);
       setProjectError(null);
       try {
-        const res = await fetch('/api/projects');
-        if (!res.ok) {
-          throw new Error(`Erreur serveur (${res.status})`);
-        }
-        const data: Project[] = await res.json();
+        const data = await listProjects();
         const sorted = [...data].sort(
           (a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER)
         );
         setProjects(sorted);
       } catch (error) {
         console.error(error);
-        setProjectError("Impossible de charger les projets pour le moment.");
+        setProjectError('Impossible de charger les projets pour le moment.');
       } finally {
         setIsLoadingProjects(false);
       }
@@ -50,7 +49,7 @@ const App: React.FC = () => {
         <div className="flex flex-col gap-1">
           <h1 className="text-white font-bold">{MY_NAME}</h1>
           <span>ROLE: {MY_ROLE}</span>
-          <span>LOC: QUÉBEC_CA</span>
+          <span>LOC: QUEBEC_CA</span>
         </div>
         <div className="flex flex-col gap-1 text-right md:text-right text-left">
           <a href="mailto:mathisdesgagne@gmail.com" className="hover:text-white hover:underline decoration-1 underline-offset-4">

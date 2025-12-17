@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(() => {
   return {
-    // Update this base if your repository name differs (e.g. '/mon-repo/').
-    base: '/Portfolio/',
+    // Relative base so the bundle works on GitHub Pages (repo subpath) and custom domains.
+    base: './',
     server: {
       port: 3000,
       host: '0.0.0.0',

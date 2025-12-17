@@ -8,8 +8,9 @@
       // SPA fallback for GitHub Pages:
       // redirect any 404 to the app entry while preserving the path via hash.
       (function () {
-        var repoBase = '/Portfolio/'; // ajuste si le nom du repo change
         var path = window.location.pathname;
+        var parts = path.split('/').filter(Boolean);
+        var repoBase = parts.length > 0 ? '/' + parts[0] + '/' : '/';
         var search = window.location.search || '';
         var hash = window.location.hash || '';
         var cleanBase = repoBase.endsWith('/') ? repoBase : repoBase + '/';

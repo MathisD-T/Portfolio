@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirect</title>
+    <meta http-equiv="refresh" content="0; url=./">
+    <script>
+      // SPA fallback for GitHub Pages:
+      // redirect any 404 to the app entry while preserving the path via hash.
+      (function () {
+        var repoBase = '/Portfolio/'; // ajuste si le nom du repo change
+        var path = window.location.pathname;
+        var search = window.location.search || '';
+        var hash = window.location.hash || '';
+        var cleanBase = repoBase.endsWith('/') ? repoBase : repoBase + '/';
+        var suffix = path.startsWith(cleanBase) ? path.slice(cleanBase.length) : path.replace(/^\\//, '');
+        var target = cleanBase + '#/' + suffix + search + hash;
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

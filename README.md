@@ -21,5 +21,6 @@ Portfolio React/Vite entierement client-side : aucune API ou backend n'est neces
 - CRUD complet sur les projets ; pas de persistance serveur.
 
 ## Deploiement statique
-- 100% compatible GitHub Pages. Le `base` Vite est regle sur `/Portfolio/` dans `vite.config.ts` ; ajuste-le si le nom du repo change.
-- Workflow `.github/workflows/deploy.yml` publie `dist` sur Pages.
+- 100% compatible GitHub Pages. Le `base` Vite est regle sur `/Portfolio/` dans `vite.config.ts` ; ajuste-le si le nom du repo change, ainsi que `repoBase` dans `public/404.html`.
+- Fallback SPA inclus (`public/404.html`) pour que `/admin` fonctionne en direct sur Pages.
+- Workflow `.github/workflows/deploy.yml` publie `dist` sur Pages (`main` -> Pages). Pousser puis attendre la fin de l'action.

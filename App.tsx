@@ -8,7 +8,8 @@ import { Project } from './types';
 const App: React.FC = () => {
   const isAdminRoute =
     typeof window !== 'undefined' &&
-    window.location.pathname.toLowerCase().includes('/admin');
+    (window.location.pathname.toLowerCase().includes('/admin') ||
+      window.location.hash.toLowerCase().includes('admin'));
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectError, setProjectError] = useState<string | null>(null);

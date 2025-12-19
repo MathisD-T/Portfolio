@@ -41,6 +41,18 @@ const DEFAULT_PROJECTS: Project[] = [
     isHighlighted: false,
     order: 3,
   },
+  {
+    id: '51396bf3-75d4-4dbb-88e5-1a666fdf0147',
+    title: 'La Signature',
+    shortDescription: 'Prototype de site pour un restaurant',
+    fullDescription: '',
+    technologies: ['HTML', 'CSS', 'JavaScript'],
+    liveUrl: 'https://mathisd-t.github.io/signature/',
+    githubUrl: '',
+    imageUrl: '',
+    isHighlighted: false,
+    order: 4,
+  },
 ];
 
 const generateId = (): string => {

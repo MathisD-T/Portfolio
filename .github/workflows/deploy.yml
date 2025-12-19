@@ -33,7 +33,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # Force la base pour GitHub Pages (repo: Portfolio) afin que les assets soient resolus correctement.
+          # Force la base pour GitHub Pages (repo: Portfolio) afin que les assets soient resolus correctement.s
           VITE_BASE: /Portfolio/
 
       - name: Upload artifact

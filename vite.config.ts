@@ -3,10 +3,20 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(() => {
-  // Base relative pour que le site fonctionne quel que soit le sous-dossier (ex: /Portfolio/, /portfolio-test/ ou domaine custom).
-  // Peut etre forcee via VITE_BASE si besoin.
-  const rawBase = process.env.VITE_BASE ?? './';
-  const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+  // Base absolue robuste pour GitHub Pages (quel que soit le chemin apres /portfolio/...).
+  // - Forceable via VITE_BASE.
+  // - Si repo user/org (ex: mathisd-t.github.io) => base "/".
+  // - Sinon => "/<nom-du-repo>/" pour que les assets se chargent meme sur /<repo>/quelque-chose.
+  const normalizeBase = (value: string) => {
+    if (!value) return '/';
+    const prefixed = value.startsWith('/') ? value : `/${value}`;
+    return prefixed.endsWith('/') ? prefixed : `${prefixed}/`;
+  };
+
+  const repo = process.env.GITHUB_REPOSITORY?.split('/')?.[1] ?? '';
+  const isUserSite = repo.endsWith('.github.io');
+  const inferred = isUserSite ? '/' : repo ? `/${repo}/` : '/';
+  const base = normalizeBase(process.env.VITE_BASE ?? inferred);
 
   return {
     base,
